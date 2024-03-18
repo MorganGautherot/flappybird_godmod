@@ -1,9 +1,11 @@
 import pygame
+
 import src.config as config
 from src.windows import Background
 
+
 class Game:
-    def __init__(self)->None:
+    def __init__(self) -> None:
         """Initialization of the game class"""
         pygame.init()
         pygame.display.set_caption("Flappy Bird")
@@ -12,6 +14,6 @@ class Game:
 
     def start(self):
         """Function that start the game"""
-        
-        while True: 
+
+        while True:
             self.background.draw(self.screen)
