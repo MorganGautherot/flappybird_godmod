@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "myenv"
+version = "0.1.0"
+description = ""
+authors = ["Morgan Gautherot"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pygame = "^2.5.2"
+numpy = "^1.26.4"
+keras = "^3.0.5"
+tensorflow = "^2.16.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
