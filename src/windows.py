@@ -17,4 +17,3 @@ class Background:
     def draw(self, screen) -> None:
         """Draw the background of the game"""
         screen.blit(self.image, self.rect)
-        self.rect = self.rect

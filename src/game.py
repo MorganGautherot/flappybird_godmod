@@ -17,3 +17,4 @@ class Game:
 
         while True:
             self.background.draw(self.screen)
+            pygame.display.update()
