@@ -7,6 +7,7 @@ class Background:
     def __init__(self) -> None:
         """Initialization of the background class"""
         self.image = pygame.image.load(config.BACKGROUND).convert()
+        self.image = pygame.transform.scale(self.image, (config.WIDTH, config.HEIGHT))
 
     @property
     def rect(self) -> pygame.Rect:
@@ -16,3 +17,4 @@ class Background:
     def draw(self, screen) -> None:
         """Draw the background of the game"""
         screen.blit(self.image, self.rect)
+        self.rect = self.rect
