@@ -1,6 +1,10 @@
+import sys
+
 import pygame
+from pygame.locals import K_ESCAPE, KEYDOWN, QUIT
 
 import src.config as config
+from src.bird import Bird
 from src.windows import Background
 
 
@@ -14,30 +18,21 @@ class Game:
         )
         self.background = Background()
         self.bird = Bird()
+        self.clock = pygame.time.Clock()
 
-    def start(self):
+    def start(self) -> None:
         """Function that start the game"""
 
         while True:
+            for event in pygame.event.get():
+                self.check_quit_event(event)
             self.background.draw(self.screen)
-            self.bird.draw(self.screen)
+            self.bird.next_statuts(self.screen)
             pygame.display.update()
+            self.clock.tick(config.FPS)
 
-
-class Bird:
-    def __init__(self) -> None:
-        """Initialization of the class"""
-        self.image = pygame.image.load(config.BIRD).convert()
-        self.x = int(config.SCREEN_WIDTH * 0.2)
-        self.y = int((config.SCREEN_HEIGHT - self.image.get_height()) / 2)
-        self.w = self.image.get_width() if self.image else 0
-        self.h = self.image.get_height() if self.image else 0
-
-    @property
-    def rect(self) -> pygame.Rect:
-        """Store background coordonates"""
-        return pygame.Rect(self.x, self.y, self.w, self.h)
-
-    def draw(self, screen: pygame.Surface) -> None:
-        """Draw the background of the game"""
-        screen.blit(self.image, self.rect)
+    def check_quit_event(self, event: pygame.event) -> None:
+        """Function that enable the user to quit the game"""
+        if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+            pygame.quit()
+            sys.exit()
