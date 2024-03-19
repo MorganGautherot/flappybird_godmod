@@ -7,12 +7,14 @@ class Background:
     def __init__(self) -> None:
         """Initialization of the background class"""
         self.image = pygame.image.load(config.BACKGROUND).convert()
-        self.image = pygame.transform.scale(self.image, (config.WIDTH, config.HEIGHT))
+        self.image = pygame.transform.scale(
+            self.image, (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+        )
 
     @property
     def rect(self) -> pygame.Rect:
         """Store background coordonates"""
-        return pygame.Rect(0, 0, config.WIDTH, config.HEIGHT)
+        return pygame.Rect(0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
 
     def draw(self, screen) -> None:
         """Draw the background of the game"""
