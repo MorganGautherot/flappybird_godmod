@@ -16,6 +16,6 @@ class Background:
         """Store background coordonates"""
         return pygame.Rect(0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
 
-    def draw(self, screen) -> None:
+    def draw(self, screen: pygame.Surface) -> None:
         """Draw the background of the game"""
         screen.blit(self.image, self.rect)

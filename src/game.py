@@ -26,6 +26,7 @@ class Game:
 
 class Bird:
     def __init__(self) -> None:
+        """Initialization of the class"""
         self.image = pygame.image.load(config.BIRD).convert()
         self.x = int(config.SCREEN_WIDTH * 0.2)
         self.y = int((config.SCREEN_HEIGHT - self.image.get_height()) / 2)
@@ -37,6 +38,6 @@ class Bird:
         """Store background coordonates"""
         return pygame.Rect(self.x, self.y, self.w, self.h)
 
-    def draw(self, screen) -> None:
+    def draw(self, screen: pygame.Surface) -> None:
         """Draw the background of the game"""
         screen.blit(self.image, self.rect)
