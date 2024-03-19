@@ -5,7 +5,7 @@ from pygame.locals import K_ESCAPE, K_SPACE, K_UP, KEYDOWN, QUIT
 
 import src.config as config
 from src.bird import Bird
-from src.windows import Background
+from src.windows import Background, Pipe
 
 
 class Game:
@@ -24,12 +24,19 @@ class Game:
     def start(self) -> None:
         """Function that start the game"""
 
+        self.pipetop = Pipe(config.SCREEN_WIDTH + 10, 100, config.PIPETOP)
+        self.pipebottom = Pipe(
+            config.SCREEN_WIDTH + 10, 100 + config.PIPE_GAP, config.PIPEBOTTOM
+        )
+
         while True:
             for event in pygame.event.get():
                 self.check_quit_event(event)
                 if self.is_tap_event(event):
                     self.bird.flap()
             self.background.draw(self.screen)
+            self.pipetop.draw(self.screen)
+            self.pipebottom.draw(self.screen)
             self.bird.next_statuts(self.screen)
             pygame.display.update()
             self.clock.tick(config.FPS)

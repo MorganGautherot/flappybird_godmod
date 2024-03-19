@@ -19,3 +19,30 @@ class Background:
     def draw(self, screen: pygame.Surface) -> None:
         """Draw the background of the game"""
         screen.blit(self.image, self.rect)
+
+
+class Pipe:
+    def __init__(self, x: int, y: int, path_image: str) -> None:
+        """Initialization of the pipe
+        Args:
+            x(int): x coordinate of the pipe
+            y(int): y coordinate of the pipe
+            path_image(str): image of the pipe
+        """
+        self.image = pygame.image.load(path_image).convert()
+        self.x = x
+        self.y = y
+        self.w = self.image.get_width()
+        self.h = self.image.get_height()
+        self.velocity_x = -5
+        self.image = pygame.image.load(path_image).convert()
+
+    @property
+    def rect(self) -> pygame.Rect:
+        """Store background coordonates"""
+        return pygame.Rect(self.x, self.y, self.w, self.h)
+
+    def draw(self, screen: pygame.Surface) -> None:
+        """Draw the background of the game"""
+        self.x += self.velocity_x
+        screen.blit(self.image, self.rect)
