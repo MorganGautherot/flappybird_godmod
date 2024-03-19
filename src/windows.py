@@ -17,7 +17,11 @@ class Background:
         return pygame.Rect(0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
 
     def draw(self, screen: pygame.Surface) -> None:
-        """Draw the background of the game"""
+        """Draw the background of the game
+
+        Args:
+            screen(pygame.Surface): object contaning the information of the screen of the game
+        """
         screen.blit(self.image, self.rect)
 
 
@@ -43,6 +47,10 @@ class Pipe:
         return pygame.Rect(self.x, self.y, self.w, self.h)
 
     def draw(self, screen: pygame.Surface) -> None:
-        """Draw the background of the game"""
+        """Draw the background of the game
+
+        Args:
+           screen(pygame.Surface): object contaning the information of the screen of the game
+        """
         self.x += self.velocity_x
         screen.blit(self.image, self.rect)

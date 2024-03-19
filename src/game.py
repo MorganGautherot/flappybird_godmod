@@ -24,10 +24,11 @@ class Game:
     def start(self) -> None:
         """Function that start the game"""
 
-        self.pipetop = Pipe(config.SCREEN_WIDTH + 10, 100, config.PIPETOP)
+        self.pipetop = Pipe(config.SCREEN_WIDTH + 10, 100 - 512, config.PIPETOP)
         self.pipebottom = Pipe(
             config.SCREEN_WIDTH + 10, 100 + config.PIPE_GAP, config.PIPEBOTTOM
         )
+        print(self.pipebottom.h)
 
         while True:
             for event in pygame.event.get():
