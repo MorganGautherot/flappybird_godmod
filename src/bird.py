@@ -60,7 +60,6 @@ class Bird:
 
         self.y = clamp(self.y + self.velocity_y, self.min_y, self.max_y)
         self.rotate()
-
         self.draw(screen)
 
     def draw(self, screen: pygame.Surface) -> None:

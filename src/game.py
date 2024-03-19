@@ -18,6 +18,7 @@ class Game:
         )
         self.background = Background()
         self.bird = Bird()
+        self.bird_lowest_height = config.SCREEN_HEIGHT - self.bird.h
         self.clock = pygame.time.Clock()
 
     def start(self) -> None:
@@ -32,6 +33,9 @@ class Game:
             self.bird.next_statuts(self.screen)
             pygame.display.update()
             self.clock.tick(config.FPS)
+            if self.bird.y > self.bird_lowest_height:
+                pygame.quit()
+                sys.exit()
 
     def check_quit_event(self, event: pygame.event) -> None:
         """Function that enable the user to quit the game
