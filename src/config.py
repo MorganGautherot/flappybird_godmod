@@ -3,6 +3,7 @@ SCREEN_HEIGHT = 720
 FPS = 30
 
 PIPE_GAP = 120
+PIPE_HEIGHT = 512
 
 BACKGROUND = "assets/sprites/background.png"
 BIRD = "assets/sprites/bird.png"
