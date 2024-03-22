@@ -1,6 +1,7 @@
 import pygame
 
 import src.config as config
+from src.utils import get_hit_mask
 
 
 class Background:
@@ -40,6 +41,7 @@ class Pipe:
         self.h = self.image.get_height()
         self.velocity_x = -5
         self.image = pygame.image.load(path_image).convert()
+        self.hit_mask = get_hit_mask(self.image) if self.image else None
 
     @property
     def rect(self) -> pygame.Rect:

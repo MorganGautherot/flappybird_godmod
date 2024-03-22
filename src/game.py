@@ -7,6 +7,7 @@ from pygame.locals import K_ESCAPE, K_SPACE, K_UP, KEYDOWN, QUIT
 
 import src.config as config
 from src.bird import Bird
+from src.utils import pixel_collision
 from src.windows import Background, Pipe
 
 
@@ -27,7 +28,7 @@ class Game:
 
     def init_pipe(self) -> None:
         """Initialization of the pipe"""
-        for i in np.arange(3, 8, 3.5):
+        for i in np.arange(3, 9, 4):
             pipe_up, pipe_bot = self.generate_pipes()
             pipe_up.x = config.SCREEN_WIDTH + pipe_up.w * i
             pipe_bot.x = config.SCREEN_WIDTH + pipe_bot.w * i
@@ -35,20 +36,25 @@ class Game:
             self.lower_pipes.append(pipe_bot)
 
     def can_spawn_pipes(self) -> bool:
+        """Tell if a new pipe can be spawn
+
+        Returns:
+           bool: True if a pip can be spawn false otherwise
+        """
         last = self.upper_pipes[-1]
         if not last:
             return True
 
         return config.SCREEN_WIDTH - (last.x + last.w) > last.w * 2.5
 
-    def spawn_new_pipes(self):
-        # add new pipe when first pipe is about to touch left of screen
+    def spawn_new_pipes(self) -> None:
+        """Add new pipes when the first pipe is about to be out of the screen"""
         upper, lower = self.generate_pipes()
         self.upper_pipes.append(upper)
         self.lower_pipes.append(lower)
 
-    def remove_old_pipes(self):
-        # remove first pipe if its out of the screen
+    def remove_old_pipes(self) -> None:
+        """Remove old pipes when they are out of the screen"""
         for pipe in self.upper_pipes:
             if pipe.x < -pipe.w:
                 self.upper_pipes.remove(pipe)
@@ -57,17 +63,22 @@ class Game:
             if pipe.x < -pipe.w:
                 self.lower_pipes.remove(pipe)
 
-    def start(self) -> None:
-        """Function that start the game"""
+    def play_game(self) -> None:
+        """Function that play the game the game"""
 
         self.init_pipe()
 
         while True:
             for event in pygame.event.get():
-                self.check_quit_event(event)
+                if self.check_quit_event(event):
+                    pygame.quit()
+                    sys.exit()
                 if self.is_tap_event(event):
                     self.bird.flap()
             self.background.draw(self.screen)
+
+            if self.collided(self.upper_pipes) or self.collided(self.lower_pipes):
+                break
 
             if self.can_spawn_pipes():
                 self.spawn_new_pipes()
@@ -81,13 +92,35 @@ class Game:
             pygame.display.update()
             self.clock.tick(config.FPS)
             if self.bird.y > self.bird_lowest_height:
-                pygame.quit()
-                sys.exit()
+                break
 
-    def generate_pipes(self) -> None:
+        while True:
+            for event in pygame.event.get():
+                if self.check_quit_event(event):
+                    pygame.quit()
+                    sys.exit()
+
+    def collided(self, pipes: list) -> bool:
+        """Check the collision between bird and pipes
+
+        Args:
+           pipes(list): list of the pipes to the checked
+
+        Returns:
+           bool: Return true if the bird collides with pipes
+        """
+
+        for pipe in pipes:
+            if pixel_collision(
+                self.bird.rect, pipe.rect, self.bird.hit_mask, pipe.hit_mask
+            ):
+                return True
+        return False
+
+    def generate_pipes(self) -> tuple:
         """Generate pipes randomly
 
-        Return
+        Returns:
             tuple: contain pipe up and pipe down
         """
 
@@ -110,8 +143,8 @@ class Game:
            event(pygame.event): the event of the user
         """
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-            pygame.quit()
-            sys.exit()
+            return True
+        return False
 
     def is_tap_event(self, event: pygame.event) -> bool:
         """Return True if there is an event
@@ -119,7 +152,7 @@ class Game:
         Args:
            event(pygame.event): the event of the user
 
-        Return:
+        Returns:
            bool: ture if the event is a space, up or click left
         """
         m_left, _, _ = pygame.mouse.get_pressed()

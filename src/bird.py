@@ -1,7 +1,7 @@
 import pygame
 
 import src.config as config
-from src.utils import clamp
+from src.utils import clamp, get_hit_mask
 
 
 class Bird:
@@ -29,6 +29,8 @@ class Bird:
 
         self.flap_acceleration = -9
         self.bird_has_flapped = False
+
+        self.hit_mask = get_hit_mask(self.image) if self.image else None
 
     @property
     def rect(self) -> pygame.Rect:
