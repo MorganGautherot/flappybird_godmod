@@ -7,6 +7,7 @@ from pygame.locals import K_ESCAPE, K_SPACE, K_UP, KEYDOWN, QUIT
 
 import src.config as config
 from src.bird import Bird
+from src.score import Score
 from src.utils import pixel_collision
 from src.windows import Background, Pipe
 
@@ -25,6 +26,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.upper_pipes = []
         self.lower_pipes = []
+        self.score = Score()
 
     def init_pipe(self) -> None:
         """Initialization of the pipe"""
@@ -75,7 +77,13 @@ class Game:
                     sys.exit()
                 if self.is_tap_event(event):
                     self.bird.flap()
+
+            for i, pipe in enumerate(self.upper_pipes):
+                if self.crossed(pipe):
+                    self.score.add()
+
             self.background.draw(self.screen)
+            self.score.draw(self.screen)
 
             if self.collided(self.upper_pipes) or self.collided(self.lower_pipes):
                 break
@@ -161,3 +169,14 @@ class Game:
         )
         screen_tap = event.type == pygame.FINGERDOWN
         return m_left or space_or_up or screen_tap
+
+    def crossed(self, pipe: Pipe) -> bool:
+        """Tell if the bird cross a pipe
+
+        Args:
+           pipe(Pipe): pipe that we have to analyse
+
+        Returns:
+           bool: True if the bird cross a pipe false otherwise
+        """
+        return pipe.center <= self.bird.center < pipe.center - pipe.velocity_x

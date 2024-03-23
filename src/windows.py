@@ -44,6 +44,11 @@ class Pipe:
         self.hit_mask = get_hit_mask(self.image) if self.image else None
 
     @property
+    def center(self) -> float:
+        """Center of the image"""
+        return self.x + self.w / 2
+
+    @property
     def rect(self) -> pygame.Rect:
         """Store background coordonates"""
         return pygame.Rect(self.x, self.y, self.w, self.h)
