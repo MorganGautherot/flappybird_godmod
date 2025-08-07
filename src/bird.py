@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pygame
 
 import src.config as config
@@ -7,12 +9,15 @@ from src.utils import clamp, get_hit_mask
 class Bird:
     def __init__(self) -> None:
         """Initialization of the class"""
+        try:
+            self.image = pygame.image.load(config.BIRD).convert()
+        except pygame.error as e:
+            raise RuntimeError(f"Failed to load bird image: {e}")
 
-        image = pygame.image.load(config.BIRD).convert()
         self.x = int(config.SCREEN_WIDTH * 0.2)
-        self.y = int((config.SCREEN_HEIGHT - image.get_height()) / 2)
-        self.w = image.get_width() if image else 0
-        self.h = image.get_height() if image else 0
+        self.y = int((config.SCREEN_HEIGHT - self.image.get_height()) / 2)
+        self.w = self.image.get_width()
+        self.h = self.image.get_height()
 
         self.min_y = -2 * self.h
         self.max_y = config.SCREEN_HEIGHT - self.h * 0.75
@@ -30,7 +35,7 @@ class Bird:
         self.flap_acceleration = -9
         self.bird_has_flapped = False
 
-        self.hit_mask = get_hit_mask(image) if image else None
+        self.hit_mask = get_hit_mask(self.image)
 
     @property
     def center(self) -> float:
@@ -54,12 +59,12 @@ class Bird:
             self.rotation_maximum,
         )
 
-    def next_statuts(self, screen: pygame.Surface, draw: bool) -> None:
+    def next_status(self, screen: Optional[pygame.Surface], draw: bool) -> None:
         """Compute the next bird status
 
         Args:
-            screen(pygame.Surface): object contaning the information of the screen of the game
-            draw(bool): if the bird as to be drawn to the screen
+            screen(Optional[pygame.Surface]): object containing the information of the screen of the game
+            draw(bool): if the bird has to be drawn to the screen
         """
         if self.velocity_y < self.maximum_velocity_y and not self.bird_has_flapped:
             self.velocity_y += self.downward_acceleration_y
@@ -68,17 +73,16 @@ class Bird:
 
         self.y = clamp(self.y + self.velocity_y, self.min_y, self.max_y)
         self.rotate()
-        if draw:
+        if draw and screen is not None:
             self.draw(screen)
 
     def draw(self, screen: pygame.Surface) -> None:
         """Draw the bird of the game
 
         Args:
-            screen(pygame.Surface): object contaning the information of the screen of the game
+            screen(pygame.Surface): object containing the information of the screen of the game
         """
-        image = pygame.image.load(config.BIRD).convert()
-        rotated_image = pygame.transform.rotate(image, self.current_rotation)
+        rotated_image = pygame.transform.rotate(self.image, self.current_rotation)
         rotated_rect = rotated_image.get_rect(center=self.rect.center)
         screen.blit(rotated_image, rotated_rect)
 

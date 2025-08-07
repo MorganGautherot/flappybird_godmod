@@ -59,11 +59,11 @@ def get_hit_mask(image: pygame.Surface) -> HitMaskType:
     )
 
 
-def collision(bird, pipes: list) -> bool:
+def collision(bird, pipes: List) -> bool:
     """Check the collision between bird and pipes
     Args:
-       bird(Bird): bird to be checked
-       pipes(list): list of the pipes to the checked
+       bird: bird to be checked
+       pipes: list of the pipes to be checked
     Returns:
        bool: Return true if the bird collides with pipes
     """
