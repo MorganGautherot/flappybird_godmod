@@ -9,3 +9,6 @@ BACKGROUND = "assets/sprites/background.png"
 BIRD = "assets/sprites/bird.png"
 PIPETOP = "assets/sprites/pipetop.png"
 PIPEBOTTOM = "assets/sprites/pipebottom.png"
+
+# Bot configuration
+BOT_MODE = False  # Set to True to enable AI bot control

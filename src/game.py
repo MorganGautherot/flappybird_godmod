@@ -1,4 +1,3 @@
-import copy
 import random
 import sys
 from typing import List, Tuple
@@ -15,11 +14,16 @@ from src.windows import Background, Pipe
 
 
 class Game:
-    def __init__(self) -> None:
-        """Initialization of the game class"""
+    def __init__(self, bot_mode: bool = False) -> None:
+        """Initialization of the game class
+
+        Args:
+            bot_mode: If True, enables AI bot control instead of human input
+        """
         try:
             pygame.init()
-            pygame.display.set_caption("Flappy Bird")
+            title = "Flappy Bird" + (" - AI Bot Mode" if bot_mode else "")
+            pygame.display.set_caption(title)
             self.screen = pygame.display.set_mode(
                 (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
             )
@@ -30,7 +34,11 @@ class Game:
             self.upper_pipes: List[Pipe] = []
             self.lower_pipes: List[Pipe] = []
             self.score = Score()
-        except pygame.error as e:
+
+            # Bot configuration
+            self.bot_mode = bot_mode
+            self.bot = Bot(self) if bot_mode else None
+        except Exception as e:
             print(f"Failed to initialize pygame: {e}")
             sys.exit(1)
 
@@ -89,12 +97,18 @@ class Game:
         Returns:
             bool: True to continue game, False to end
         """
-        # Handle events
+        # Handle events (quit events always processed, tap events only in human mode)
         for event in pygame.event.get():
             if self.check_quit_event(event):
                 pygame.quit()
                 sys.exit()
-            if self.is_tap_event(event):
+            if not self.bot_mode and self.is_tap_event(event):
+                self.bird.flap()
+
+        # Bot decision making (only in bot mode)
+        if self.bot_mode and self.bot:
+            decision = self.bot.decide_action()
+            if decision == "flap":
                 self.bird.flap()
 
         # Update score
@@ -155,8 +169,36 @@ class Game:
         self.score.draw(self.screen)
         self.bird.next_status(self.screen, draw=True)
 
+        # Draw bot mode indicator
+        if self.bot_mode:
+            self._draw_bot_indicator()
+
         pygame.display.update()
         self.clock.tick(config.FPS)
+
+    def _draw_bot_indicator(self) -> None:
+        """Draw visual indicator that bot mode is active"""
+        # Initialize font if not already done
+        if not hasattr(self, "_bot_font"):
+            pygame.font.init()
+            self._bot_font = pygame.font.Font(None, 36)
+
+        # Create text surface
+        text = self._bot_font.render("AI BOT", True, (255, 255, 0))  # Yellow text
+        text_rect = text.get_rect()
+        text_rect.topright = (config.SCREEN_WIDTH - 20, 20)
+
+        # Draw semi-transparent background
+        background_rect = text_rect.copy()
+        background_rect.inflate(20, 10)
+        background_surface = pygame.Surface(
+            (background_rect.width, background_rect.height)
+        )
+        background_surface.set_alpha(128)  # Semi-transparent
+        background_surface.fill((0, 0, 0))  # Black background
+
+        self.screen.blit(background_surface, background_rect)
+        self.screen.blit(text, text_rect)
 
     def generate_pipes(self) -> Tuple[Pipe, Pipe]:
         """Generate pipes randomly
@@ -261,25 +303,46 @@ class Bot:
         Returns:
             str: "flap" or "no_flap" based on collision simulation
         """
-        # Simulate not flapping
-        bird_no_flap = copy.deepcopy(self.game.bird)
-        bird_no_flap.next_status(None, draw=False)
+        # Create lightweight bird state copies (avoid pygame Surface copying)
+        bird_no_flap_y = self.game.bird.y
+        bird_no_flap_velocity = self.game.bird.velocity_y
 
-        # Simulate flapping
-        bird_flap = copy.deepcopy(self.game.bird)
-        bird_flap.flap()
-        bird_flap.next_status(None, draw=False)
+        bird_flap_y = self.game.bird.y
+        bird_flap_velocity = self.game.bird.flap_acceleration
 
-        # Create pipe copies for collision testing
-        upper_pipes_copy = [copy.deepcopy(upper_pipe)]
-        lower_pipes_copy = [copy.deepcopy(lower_pipe)]
+        # Simulate one frame of physics for both scenarios
+        # No flap scenario
+        if bird_no_flap_velocity < self.game.bird.maximum_velocity_y:
+            bird_no_flap_velocity += self.game.bird.downward_acceleration_y
+        bird_no_flap_y += bird_no_flap_velocity
+        bird_no_flap_y = max(
+            min(bird_no_flap_y, self.game.bird.max_y), self.game.bird.min_y
+        )
+
+        # Flap scenario
+        bird_flap_y += bird_flap_velocity
+        bird_flap_y = max(min(bird_flap_y, self.game.bird.max_y), self.game.bird.min_y)
+
+        # Check collisions using simple rectangle collision (faster than pixel-perfect)
+        bird_rect = self.game.bird.rect
+
+        # Create temporary rectangles for collision testing
+        no_flap_rect = pygame.Rect(
+            bird_rect.x, bird_no_flap_y, bird_rect.width, bird_rect.height
+        )
+        flap_rect = pygame.Rect(
+            bird_rect.x, bird_flap_y, bird_rect.width, bird_rect.height
+        )
+
+        upper_rect = upper_pipe.rect
+        lower_rect = lower_pipe.rect
 
         # Check collisions
-        no_flap_collision = collision(
-            bird=bird_no_flap, pipes=upper_pipes_copy
-        ) or collision(bird=bird_no_flap, pipes=lower_pipes_copy)
-        flap_collision = collision(bird=bird_flap, pipes=upper_pipes_copy) or collision(
-            bird=bird_flap, pipes=lower_pipes_copy
+        no_flap_collision = no_flap_rect.colliderect(
+            upper_rect
+        ) or no_flap_rect.colliderect(lower_rect)
+        flap_collision = flap_rect.colliderect(upper_rect) or flap_rect.colliderect(
+            lower_rect
         )
 
         # Decision logic: avoid collision if possible
