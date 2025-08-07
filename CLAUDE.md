@@ -6,7 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Running the Game
 ```bash
+# Human player mode
 python main.py
+
+# AI Bot mode (single game)
+python main_bot.py
+
+# AI Bot mode (multiple games)
+python main_bot.py 10  # Runs 10 games
 ```
 
 ### Dependency Management
@@ -54,7 +61,7 @@ The game follows a traditional game loop pattern centered around the `Game` clas
 
 **Pipe Class (`src/windows.py`)**: Manages pipe obstacles that move horizontally across the screen. Pipes are generated in pairs (upper/lower) with random gap positioning.
 
-**Bot Class (`src/game.py`)**: AI system that uses lookahead simulation by creating deep copies of game objects to predict collision outcomes and determine whether to flap or not.
+**Bot Class (`src/game.py`)**: AI system that uses lookahead simulation by creating deep copies of game objects to predict collision outcomes and determine whether to flap or not. The bot can be enabled by creating a Game instance with `bot_mode=True` or by running `main_bot.py`.
 
 ### Physics and Collision System
 The game uses pixel-perfect collision detection via hit masks rather than simple rectangle collision. The `utils.py` module provides collision utilities that check alpha channel transparency for precise collision boundaries.
