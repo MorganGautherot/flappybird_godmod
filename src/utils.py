@@ -57,3 +57,17 @@ def get_hit_mask(image: pygame.Surface) -> HitMaskType:
             for x in range(image.get_width())
         )
     )
+
+
+def collision(bird, pipes: list) -> bool:
+    """Check the collision between bird and pipes
+    Args:
+       bird(Bird): bird to be checked
+       pipes(list): list of the pipes to the checked
+    Returns:
+       bool: Return true if the bird collides with pipes
+    """
+    for pipe in pipes:
+        if pixel_collision(bird.rect, pipe.rect, bird.hit_mask, pipe.hit_mask):
+            return True
+    return False

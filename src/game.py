@@ -1,3 +1,4 @@
+import copy
 import random
 import sys
 
@@ -8,7 +9,7 @@ from pygame.locals import K_ESCAPE, K_SPACE, K_UP, KEYDOWN, QUIT
 import src.config as config
 from src.bird import Bird
 from src.score import Score
-from src.utils import pixel_collision
+from src.utils import collision
 from src.windows import Background, Pipe
 
 
@@ -83,9 +84,10 @@ class Game:
                     self.score.add()
 
             self.background.draw(self.screen)
-            self.score.draw(self.screen)
 
-            if self.collided(self.upper_pipes) or self.collided(self.lower_pipes):
+            if collision(bird=self.bird, pipes=self.upper_pipes) or collision(
+                bird=self.bird, pipes=self.lower_pipes
+            ):
                 break
 
             if self.can_spawn_pipes():
@@ -93,10 +95,13 @@ class Game:
             self.remove_old_pipes()
 
             for up, low in zip(self.upper_pipes, self.lower_pipes):
-                up.draw(self.screen)
-                low.draw(self.screen)
+                up.newt_statuts(self.screen, draw=True)
+                low.newt_statuts(self.screen, draw=True)
 
-            self.bird.next_statuts(self.screen)
+            self.score.draw(self.screen)
+
+            self.bird.next_statuts(self.screen, draw=True)
+
             pygame.display.update()
             self.clock.tick(config.FPS)
             if self.bird.y > self.bird_lowest_height:
@@ -107,23 +112,6 @@ class Game:
                 if self.check_quit_event(event):
                     pygame.quit()
                     sys.exit()
-
-    def collided(self, pipes: list) -> bool:
-        """Check the collision between bird and pipes
-
-        Args:
-           pipes(list): list of the pipes to the checked
-
-        Returns:
-           bool: Return true if the bird collides with pipes
-        """
-
-        for pipe in pipes:
-            if pixel_collision(
-                self.bird.rect, pipe.rect, self.bird.hit_mask, pipe.hit_mask
-            ):
-                return True
-        return False
 
     def generate_pipes(self) -> tuple:
         """Generate pipes randomly
@@ -180,3 +168,29 @@ class Game:
            bool: True if the bird cross a pipe false otherwise
         """
         return pipe.center <= self.bird.center < pipe.center - pipe.velocity_x
+
+
+class Bot:
+    def search(self, bird, upper_pipe, lower_pipe):
+        self.copy_bird_1 = copy.deepcopy(bird)
+        self.copy_bird_2 = copy.deepcopy(bird)
+        self.copy_upper_pipe = copy.deepcopy(upper_pipe)
+        self.copy_lower_pipe = copy.deepcopy(lower_pipe)
+
+        self.copy_bird_1.next_statuts(self.screen, draw=False)
+
+        self.copy_bird_2.flap()
+        self.copy_bird_2.next_statuts(self.screen, draw=False)
+
+        for up, low in zip(self.upper_pipes, self.lower_pipes):
+            up.next_statuts(self.screen, draw=False)
+            low.next_statuts(self.screen, draw=False)
+
+        if collision(bird=self.copy_bird_1, pipes=self.upper_pipes) or collision(
+            bird=self.copy_bird_1, pipes=self.lower_pipes
+        ):
+            return "no_jump"
+        if collision(bird=self.copy_bird_2, pipes=self.upper_pipes) or collision(
+            bird=self.copy_bird_2, pipes=self.lower_pipes
+        ):
+            return "jump"

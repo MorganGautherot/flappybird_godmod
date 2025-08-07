@@ -53,11 +53,13 @@ class Pipe:
         """Store background coordonates"""
         return pygame.Rect(self.x, self.y, self.w, self.h)
 
-    def draw(self, screen: pygame.Surface) -> None:
+    def newt_statuts(self, screen: pygame.Surface, draw: bool) -> None:
         """Draw the background of the game
 
         Args:
            screen(pygame.Surface): object contaning the information of the screen of the game
+           draw(bool): if the pipe as to be drawn to the screen
         """
         self.x += self.velocity_x
-        screen.blit(self.image, self.rect)
+        if draw:
+            screen.blit(self.image, self.rect)

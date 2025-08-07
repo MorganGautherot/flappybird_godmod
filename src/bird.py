@@ -8,11 +8,11 @@ class Bird:
     def __init__(self) -> None:
         """Initialization of the class"""
 
-        self.image = pygame.image.load(config.BIRD).convert()
+        image = pygame.image.load(config.BIRD).convert()
         self.x = int(config.SCREEN_WIDTH * 0.2)
-        self.y = int((config.SCREEN_HEIGHT - self.image.get_height()) / 2)
-        self.w = self.image.get_width() if self.image else 0
-        self.h = self.image.get_height() if self.image else 0
+        self.y = int((config.SCREEN_HEIGHT - image.get_height()) / 2)
+        self.w = image.get_width() if image else 0
+        self.h = image.get_height() if image else 0
 
         self.min_y = -2 * self.h
         self.max_y = config.SCREEN_HEIGHT - self.h * 0.75
@@ -30,7 +30,7 @@ class Bird:
         self.flap_acceleration = -9
         self.bird_has_flapped = False
 
-        self.hit_mask = get_hit_mask(self.image) if self.image else None
+        self.hit_mask = get_hit_mask(image) if image else None
 
     @property
     def center(self) -> float:
@@ -54,11 +54,12 @@ class Bird:
             self.rotation_maximum,
         )
 
-    def next_statuts(self, screen: pygame.Surface) -> None:
+    def next_statuts(self, screen: pygame.Surface, draw: bool) -> None:
         """Compute the next bird status
 
         Args:
             screen(pygame.Surface): object contaning the information of the screen of the game
+            draw(bool): if the bird as to be drawn to the screen
         """
         if self.velocity_y < self.maximum_velocity_y and not self.bird_has_flapped:
             self.velocity_y += self.downward_acceleration_y
@@ -67,7 +68,8 @@ class Bird:
 
         self.y = clamp(self.y + self.velocity_y, self.min_y, self.max_y)
         self.rotate()
-        self.draw(screen)
+        if draw:
+            self.draw(screen)
 
     def draw(self, screen: pygame.Surface) -> None:
         """Draw the bird of the game
@@ -75,7 +77,8 @@ class Bird:
         Args:
             screen(pygame.Surface): object contaning the information of the screen of the game
         """
-        rotated_image = pygame.transform.rotate(self.image, self.current_rotation)
+        image = pygame.image.load(config.BIRD).convert()
+        rotated_image = pygame.transform.rotate(image, self.current_rotation)
         rotated_rect = rotated_image.get_rect(center=self.rect.center)
         screen.blit(rotated_image, rotated_rect)
 
