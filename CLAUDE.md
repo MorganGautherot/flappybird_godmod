@@ -12,8 +12,17 @@ python main.py
 # AI Bot mode (single game)
 python main_bot.py
 
-# AI Bot mode (multiple games)
+# AI Bot mode (multiple games with display)
 python main_bot.py 10  # Runs 10 games
+
+# Batch testing (headless, no display) - RECOMMENDED
+python fast_batch.py 100  # Fast, reliable batch testing (parallel)
+python sequential.py 100  # Sequential testing (one game at a time)
+python simple_batch.py 500 -w 4 -o results.csv  # Advanced parallel options
+python simple_batch.py 100 -s -o results.csv  # Advanced sequential options
+
+# Alternative batch testing (may have pygame issues)
+python batch_test.py 100 -o results.csv  # Original implementation
 ```
 
 ### Dependency Management
@@ -59,7 +68,7 @@ The game follows a traditional game loop pattern centered around the `Game` clas
 
 **Bird Class (`src/bird.py`)**: Represents the player character with physics simulation including gravity, flapping mechanics, rotation, and hit mask for pixel-perfect collision detection.
 
-**Pipe Class (`src/windows.py`)**: Manages pipe obstacles that move horizontally across the screen. Pipes are generated in pairs (upper/lower) with random gap positioning.
+**Pipe Class (`src/windows.py`)**: Manages pipe obstacles that move horizontally across the screen. Pipes are generated in pairs (upper/lower) with constrained random gap positioning to ensure playable transitions between consecutive pipes.
 
 **Bot Class (`src/game.py`)**: AI system that uses lookahead simulation by creating deep copies of game objects to predict collision outcomes and determine whether to flap or not. The bot can be enabled by creating a Game instance with `bot_mode=True` or by running `main_bot.py`.
 
@@ -67,7 +76,9 @@ The game follows a traditional game loop pattern centered around the `Game` clas
 The game uses pixel-perfect collision detection via hit masks rather than simple rectangle collision. The `utils.py` module provides collision utilities that check alpha channel transparency for precise collision boundaries.
 
 ### Configuration
-All game constants (screen dimensions, physics parameters, asset paths) are centralized in `src/config.py` for easy tuning.
+All game constants (screen dimensions, physics parameters, asset paths, pipe constraints) are centralized in `src/config.py` for easy tuning. Key pipe constraint parameters:
+- `MAX_GAP_TRANSITION`: Maximum vertical distance between consecutive pipe gaps (prevents impossible jumps)
+- `MIN_GAP_Y`/`MAX_GAP_Y`: Bounds for gap positioning (keeps gaps in playable area)
 
 ### Asset Management
 Game sprites are stored in `assets/sprites/` and loaded on-demand. Score digits (0-9.png) are pre-loaded for performance during score rendering.

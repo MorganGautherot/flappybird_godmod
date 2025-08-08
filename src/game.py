@@ -14,13 +14,25 @@ from src.windows import Background, Pipe
 
 
 class Game:
-    def __init__(self, bot_mode: bool = False) -> None:
+    def __init__(self, bot_mode: bool = False, seed: int = None) -> None:
         """Initialization of the game class
 
         Args:
             bot_mode: If True, enables AI bot control instead of human input
+            seed: Random seed for reproducible games (None for random seed)
         """
         try:
+            # Set random seed for reproducible games
+            if seed is not None:
+                random.seed(seed)
+                self.seed = seed
+            else:
+                import time
+
+                self.seed = int(time.time() * 1000000) % 2**32
+                random.seed(self.seed)
+
+            # Initialize pygame and display
             pygame.init()
             title = "Flappy Bird" + (" - AI Bot Mode" if bot_mode else "")
             pygame.display.set_caption(title)
@@ -28,9 +40,10 @@ class Game:
                 (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
             )
             self.background = Background()
+            self.clock = pygame.time.Clock()
+
             self.bird = Bird()
             self.bird_lowest_height = config.SCREEN_HEIGHT - self.bird.h
-            self.clock = pygame.time.Clock()
             self.upper_pipes: List[Pipe] = []
             self.lower_pipes: List[Pipe] = []
             self.score = Score()
@@ -38,6 +51,11 @@ class Game:
             # Bot configuration
             self.bot_mode = bot_mode
             self.bot = Bot(self) if bot_mode else None
+
+            # Pipe generation state
+            self.last_gap_y = (
+                None  # Track last pipe gap position for smooth transitions
+            )
         except Exception as e:
             print(f"Failed to initialize pygame: {e}")
             sys.exit(1)
@@ -201,17 +219,33 @@ class Game:
         self.screen.blit(text, text_rect)
 
     def generate_pipes(self) -> Tuple[Pipe, Pipe]:
-        """Generate pipes randomly
+        """Generate pipes with constrained gap transitions for playability
 
         Returns:
             Tuple[Pipe, Pipe]: contain pipe up and pipe down
         """
-        base_y = config.SCREEN_HEIGHT
-
-        gap_y = random.randrange(0, int(base_y * 0.6 - config.PIPE_GAP))
-        gap_y += int(base_y * 0.2)
         pipe_x = config.SCREEN_WIDTH + 10
 
+        # Calculate gap TOP Y position with constraints
+        if self.last_gap_y is None:
+            # First pipe - center it in the playable area
+            gap_y = (config.MIN_GAP_Y + config.MAX_GAP_Y) // 2
+        else:
+            # Subsequent pipes - constrain transition distance
+            min_allowed_gap = max(
+                config.MIN_GAP_Y, self.last_gap_y - config.MAX_GAP_TRANSITION
+            )
+            max_allowed_gap = min(
+                config.MAX_GAP_Y, self.last_gap_y + config.MAX_GAP_TRANSITION
+            )
+
+            gap_y = random.randint(min_allowed_gap, max_allowed_gap)
+
+        # Store gap position for next pipe generation
+        self.last_gap_y = gap_y
+
+        # Create pipes with gap at calculated position
+        # gap_y is the top of the gap, so top pipe ends at gap_y, bottom pipe starts at gap_y + GAP
         pipetop = Pipe(pipe_x, gap_y - config.PIPE_HEIGHT, config.PIPETOP)
         pipebottom = Pipe(pipe_x, gap_y + config.PIPE_GAP, config.PIPEBOTTOM)
 

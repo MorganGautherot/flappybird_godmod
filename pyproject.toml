@@ -1,17 +1,16 @@
 [tool.poetry]
-name = "myenv"
+name = "flappybird-godmod"
 version = "0.1.0"
 description = ""
-authors = ["Morgan Gautherot"]
+authors = ["Morgan"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 pygame = "^2.5.2"
-numpy = "^1.26.4"
-keras = "^3.0.5"
-tensorflow = "^2.16.1"
 pre-commit = "^3.6.2"
+numpy = "^1.26.4"
+pytest = "^8.4.1"
 
 
 [build-system]
