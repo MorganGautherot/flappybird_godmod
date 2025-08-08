@@ -12,10 +12,13 @@ except ImportError:
     PYGAME_AVAILABLE = False
 
 
-def replay_auto_close_game(seed: int, verbose: bool = True) -> None:
+def replay_auto_close_game(
+    seed: int, verbose: bool = True, bot_type: str = "single"
+) -> None:
     """Reproduit une partie avec fermeture automatique avec une seed spécifique."""
+    bot_name = "Bot Deux Tuyaux" if bot_type == "two_pipes" else "Bot Simple"
     if verbose:
-        print(f"🔄 Reproduction de la partie avec la seed: {seed}")
+        print(f"🔄 Reproduction de la partie avec la seed: {seed} ({bot_name})")
         print("-" * 50)
 
     try:
@@ -34,7 +37,7 @@ def replay_auto_close_game(seed: int, verbose: bool = True) -> None:
         if "SDL_VIDEODRIVER" not in os.environ:
             os.environ["SDL_VIDEODRIVER"] = "dummy"  # Use dummy driver if no display
 
-        game = AutoCloseGame(bot_mode=True, seed=seed)
+        game = AutoCloseGame(bot_mode=True, seed=seed, bot_type=bot_type)
 
         if verbose:
             print(f"Partie initialisée avec la seed {game.seed}")
@@ -55,8 +58,10 @@ def replay_auto_close_game(seed: int, verbose: bool = True) -> None:
         return
 
 
-def replay_visual_game(seed: int) -> None:
+def replay_visual_game(seed: int, bot_type: str = "single") -> None:
     """Reproduit une partie avec affichage visuel en utilisant une seed spécifique."""
+    bot_name = "Bot Deux Tuyaux" if bot_type == "two_pipes" else "Bot Simple"
+
     if not PYGAME_AVAILABLE:
         print("❌ Pygame non disponible. Mode visuel non supporté.")
         print(
@@ -66,7 +71,7 @@ def replay_visual_game(seed: int) -> None:
         )
         return
 
-    print(f"🎮 Lancement de la partie visuelle avec la seed: {seed}")
+    print(f"🎮 Lancement de la partie visuelle avec la seed: {seed} ({bot_name})")
     print("Fermer la fenêtre ou appuyer sur ESC pour quitter")
 
     try:
@@ -78,7 +83,7 @@ def replay_visual_game(seed: int) -> None:
             del os.environ["SDL_VIDEODRIVER"]
 
         # Créer et lancer exactement comme main_bot.py
-        game = Game(bot_mode=True, seed=seed)
+        game = Game(bot_mode=True, seed=seed, bot_type=bot_type)
         print(f"Partie initialisée avec la seed {game.seed}")
 
         # Jouer la partie avec fenêtre graphique pygame
@@ -152,7 +157,16 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Reproduire une partie Flappy Bird avec une seed"
+        description="Reproduire une partie Flappy Bird avec une seed",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemples d'utilisation:
+  python replay_seed.py -s 12345                      # Reproduire seed avec bot simple
+  python replay_seed.py -s 12345 -v                   # Mode visuel avec bot simple
+  python replay_seed.py -s 12345 -b two_pipes         # Bot avancé, mode auto-close
+  python replay_seed.py -s 12345 -v -b two_pipes      # Bot avancé, mode visuel
+  python replay_seed.py -f results.csv -g 42 -v       # Game ID 42 en visuel
+        """,
     )
     parser.add_argument("-s", "--seed", type=int, help="Seed à reproduire")
     parser.add_argument(
@@ -163,6 +177,13 @@ def main():
         "-v", "--visual", action="store_true", help="Mode visuel (avec affichage)"
     )
     parser.add_argument("-q", "--quiet", action="store_true", help="Mode silencieux")
+    parser.add_argument(
+        "-b",
+        "--bot-type",
+        choices=["single", "two_pipes"],
+        default="single",
+        help="Type de bot à utiliser (défaut: single)",
+    )
 
     args = parser.parse_args()
 
@@ -177,27 +198,24 @@ def main():
 
     # Vérifier qu'une seed est fournie
     if not args.seed:
-        print("Utilisation:")
-        print(
-            "  python replay_seed.py -s 12345                    # Reproduire seed 12345"
-        )
-        print("  python replay_seed.py -s 12345 -v                 # Mode visuel")
-        print(
-            "  python replay_seed.py -f results.csv -g 42        # Chercher game ID 42 dans CSV"
-        )
-        print(
-            "  python replay_seed.py -f results.csv -s 12345     # Info sur seed 12345"
-        )
-        print("\nExemples:")
-        print("  python replay_seed.py -s 1691415123456")
-        print("  python replay_seed.py -s 1691415123456 --visual")
+        parser.print_help()
         sys.exit(1)
+
+    # Affichage du bot sélectionné
+    bot_display = {
+        "single": "🧠 Bot Simple (1 tuyau)",
+        "two_pipes": "🔮 Bot Deux Tuyaux (2 tuyaux)",
+    }
+    if not args.quiet:
+        print(f"Bot sélectionné: {bot_display[args.bot_type]}")
 
     try:
         if args.visual:
-            replay_visual_game(args.seed)
+            replay_visual_game(args.seed, bot_type=args.bot_type)
         else:
-            replay_auto_close_game(args.seed, verbose=not args.quiet)
+            replay_auto_close_game(
+                args.seed, verbose=not args.quiet, bot_type=args.bot_type
+            )
 
     except KeyboardInterrupt:
         print("\n⚠️  Reproduction interrompue par l'utilisateur")

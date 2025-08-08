@@ -18,16 +18,36 @@ pip install -r requirements.txt
 # Jouer en mode humain
 python main.py
 
-# Jouer avec le bot IA
+# Jouer avec le bot IA simple
 python main_bot.py
 
-# Lancer plusieurs parties avec le bot
-python main_bot.py 5
+# Jouer avec le bot IA avancé (deux tuyaux)
+python main_bot.py -b two_pipes
+
+# Lancer 5 parties avec le bot simple
+python main_bot.py -n 5
+
+# Lancer 10 parties avec le bot avancé
+python main_bot.py -n 10 -b two_pipes
+
+# Comparer les deux bots
+python test_two_bots.py -n 20
 ```
 
 ## 🤖 Mode Bot IA
 
-Cette version inclut un bot IA qui joue automatiquement à Flappy Bird sans intervention humaine.
+Cette version inclut **deux types de bots IA** qui jouent automatiquement à Flappy Bird sans intervention humaine :
+
+### 🧠 Bot Simple (1 tuyau)
+- Analyse uniquement le prochain tuyau
+- Logique de décision rapide et efficace
+- Bon pour la plupart des situations
+
+### 🔮 Bot Avancé (2 tuyaux)
+- Analyse les **deux prochains tuyaux** simultanément
+- Planification à plus long terme
+- Meilleure anticipation des situations complexes
+- Plus de calculs mais potentiellement de meilleurs scores
 
 ### Comment ça Marche
 
@@ -56,13 +76,36 @@ Le bot analyse le prochain tuyau à venir et :
 ```python
 from src.game import Game
 
-# Partie avec bot
+# Partie avec bot simple (défaut)
 bot_game = Game(bot_mode=True)
 bot_game.play_game()
+
+# Partie avec bot avancé (deux tuyaux)
+advanced_bot_game = Game(bot_mode=True, bot_type="two_pipes")
+advanced_bot_game.play_game()
 
 # Partie humaine (défaut)
 human_game = Game(bot_mode=False)  # ou juste Game()
 human_game.play_game()
+```
+
+### Commandes d'Utilisation
+
+```bash
+# Bot simple - parties infinies
+python main_bot.py
+
+# Bot avancé - parties infinies
+python main_bot.py -b two_pipes
+
+# 5 parties avec bot simple
+python main_bot.py -n 5
+
+# 10 parties avec bot avancé
+python main_bot.py -n 10 -b two_pipes
+
+# Aide et options
+python main_bot.py --help
 ```
 
 ## 🌱 Système de Seeds - Parties Reproductibles
@@ -89,11 +132,17 @@ game_id,seed,score,duration_seconds,pipes_passed,status,timestamp
 
 ### Reproduction de Parties
 ```bash
-# Reproduire avec une seed connue
+# Reproduire avec une seed connue (bot simple)
 python replay_seed.py -s 1691415123457
 
-# Mode visuel (voir la partie se jouer)
+# Mode visuel avec bot simple (voir la partie se jouer)
 python replay_seed.py -s 1691415123457 -v
+
+# Reproduire avec bot avancé (deux tuyaux)
+python replay_seed.py -s 1691415123457 -b two_pipes
+
+# Mode visuel avec bot avancé
+python replay_seed.py -s 1691415123457 -v -b two_pipes
 
 # Chercher une seed depuis un CSV
 python replay_seed.py -f results.csv -g 42  # Game ID 42
@@ -146,11 +195,13 @@ Pour chaque nouveau tuyau :
 ### Tests Séquentiels
 ```bash
 # Tests séquentiels simples
-python sequential.py 10                    # 10 parties séquentielles
-python sequential.py 100 -o results.csv   # Sauver dans un fichier spécifique
+python sequential.py 10                              # 10 parties séquentielles
+python sequential.py 100 -o results.csv             # Sauver dans un fichier spécifique
 
 # Tests visuels séquentiels (chaque partie s'ouvre et se ferme automatiquement)
-python sequential_visual.py 5             # 5 parties visuelles auto-close
+python sequential_visual.py 5                       # 5 parties visuelles bot simple
+python sequential_visual.py 10 -b two_pipes         # 10 parties visuelles bot avancé
+python sequential_visual.py 20 -b two_pipes -o test.csv  # Bot avancé avec fichier custom
 ```
 
 ### Analyse des Résultats

@@ -25,7 +25,7 @@ class AutoCloseGame(Game):
 
 
 def run_single_visual_game(
-    game_id: int, seed: int = None, verbose: bool = True
+    game_id: int, seed: int = None, verbose: bool = True, bot_type: str = "single"
 ) -> Dict:
     """Run a single visual game and return results."""
     try:
@@ -35,7 +35,7 @@ def run_single_visual_game(
         start_time = time.time()
 
         # Create and run auto-closing visual game with seed
-        game = AutoCloseGame(bot_mode=True, seed=seed)
+        game = AutoCloseGame(bot_mode=True, seed=seed, bot_type=bot_type)
         game.play_game()
 
         duration = time.time() - start_time
@@ -73,15 +73,20 @@ def run_single_visual_game(
 
 
 def run_sequential_visual_batch(
-    num_games: int, output_file: str = None, verbose: bool = True
+    num_games: int,
+    output_file: str = None,
+    verbose: bool = True,
+    bot_type: str = "single",
 ) -> List[Dict]:
     """Run games visually one after another and save results to CSV."""
 
     if output_file is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"sequential_visual_results_{timestamp}.csv"
+        bot_suffix = "two_pipes" if bot_type == "two_pipes" else "single"
+        output_file = f"sequential_visual_{bot_suffix}_results_{timestamp}.csv"
 
-    print(f"🎮 Lancement séquentiel de {num_games} parties VISUELLES")
+    bot_name = "Bot Deux Tuyaux" if bot_type == "two_pipes" else "Bot Simple"
+    print(f"🎮 Lancement séquentiel de {num_games} parties VISUELLES avec {bot_name}")
     print(
         "Chaque partie s'ouvre dans une fenêtre pygame et se ferme automatiquement au game over"
     )
@@ -98,7 +103,9 @@ def run_sequential_visual_batch(
         # Run games one by one in a simple loop
         for game_id in range(1, num_games + 1):
             seed = base_seed + game_id
-            result = run_single_visual_game(game_id, seed=seed, verbose=verbose)
+            result = run_single_visual_game(
+                game_id, seed=seed, verbose=verbose, bot_type=bot_type
+            )
             results.append(result)
 
             # Progress update every 5 games (or every game if <= 10 total)
@@ -225,12 +232,26 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Sequential Visual Flappy Bird batch testing"
+        description="Sequential Visual Flappy Bird batch testing",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemples d'utilisation:
+  python sequential_visual.py 10                    # 10 parties avec bot simple
+  python sequential_visual.py 20 -b two_pipes       # 20 parties avec bot avancé
+  python sequential_visual.py 5 -o results.csv      # Sauver dans fichier spécifique
+        """,
     )
     parser.add_argument("num_games", type=int, help="Number of games to run")
     parser.add_argument("-o", "--output", help="Output CSV filename")
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="Reduce output verbosity"
+    )
+    parser.add_argument(
+        "-b",
+        "--bot-type",
+        choices=["single", "two_pipes"],
+        default="single",
+        help="Type of bot to use (default: single)",
     )
 
     args = parser.parse_args()
@@ -251,9 +272,19 @@ def main():
             print("Opération annulée.")
             sys.exit(0)
 
+    # Affichage du bot sélectionné
+    bot_display = {
+        "single": "🧠 Bot Simple (1 tuyau)",
+        "two_pipes": "🔮 Bot Deux Tuyaux (2 tuyaux)",
+    }
+    print(f"Bot sélectionné: {bot_display[args.bot_type]}")
+
     try:
         run_sequential_visual_batch(
-            num_games=args.num_games, output_file=args.output, verbose=not args.quiet
+            num_games=args.num_games,
+            output_file=args.output,
+            verbose=not args.quiet,
+            bot_type=args.bot_type,
         )
         print("\n🎉 Batch testing visuel terminé avec succès!")
 
