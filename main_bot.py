@@ -9,14 +9,27 @@ from typing import Optional
 from src.game import Game
 
 
-def main(iterations: Optional[int] = None, bot_type: str = "single") -> None:
+def main(
+    iterations: Optional[int] = None,
+    bot_type: str = "single",
+    neural_weights: Optional[list] = None,
+) -> None:
     """Run the game in bot mode
 
     Args:
         iterations: Number of games to run. If None, runs indefinitely.
-        bot_type: Type of bot to use ("single" or "two_pipes")
+        bot_type: Type of bot to use ("single", "two_pipes", or "neural")
+        neural_weights: List of 5 weights for neural bot [w1, w2, w3, w4, bias]
     """
-    bot_name = "Bot Simple" if bot_type == "single" else "Bot Deux Tuyaux"
+    if bot_type == "single":
+        bot_name = "Bot Simple"
+    elif bot_type == "two_pipes":
+        bot_name = "Bot Deux Tuyaux"
+    elif bot_type == "neural":
+        bot_name = f"Bot Neural {neural_weights}"
+    else:
+        bot_name = f"Bot {bot_type}"
+
     print(f"🤖 Démarrage de Flappy Bird avec {bot_name}...")
     print("Appuyez sur ESC pour quitter à tout moment.")
 
@@ -31,6 +44,11 @@ def main(iterations: Optional[int] = None, bot_type: str = "single") -> None:
 
             # Create and run game in bot mode with specified bot type
             game = Game(bot_mode=True, bot_type=bot_type)
+
+            # Set neural weights if using neural bot
+            if bot_type == "neural" and neural_weights:
+                game.neural_weights = neural_weights
+
             game.play_game()
 
             # Track statistics
@@ -72,6 +90,8 @@ Exemples d'utilisation:
   python main_bot.py -n 5                     # Bot simple, 5 parties
   python main_bot.py -b two_pipes              # Bot deux tuyaux, parties infinies
   python main_bot.py -n 10 -b two_pipes       # Bot deux tuyaux, 10 parties
+  python main_bot.py -b neural -w 0.01 0.97 -1.95 0.72 -0.20  # Bot neural avec poids
+  python main_bot.py -n 5 -b neural -w 0.01 0.97 -1.95 0.72 -0.20  # Bot neural, 5 parties
         """,
     )
 
@@ -82,9 +102,17 @@ Exemples d'utilisation:
     parser.add_argument(
         "-b",
         "--bot-type",
-        choices=["single", "two_pipes"],
+        choices=["single", "two_pipes", "neural"],
         default="single",
         help="Type de bot à utiliser (défaut: single)",
+    )
+
+    parser.add_argument(
+        "-w",
+        "--neural-weights",
+        nargs=5,
+        type=float,
+        help="Poids pour le bot neural [w1, w2, w3, w4, bias] (requis si bot-type=neural)",
     )
 
     # Support pour l'ancien format (premier argument = nombre de parties)
@@ -108,11 +136,23 @@ Exemples d'utilisation:
         if unknown:
             print(f"⚠️ Arguments non reconnus ignorés: {' '.join(unknown)}")
 
+        # Validation pour bot neural
+        if args.bot_type == "neural" and not args.neural_weights:
+            parser.error("--neural-weights est requis quand --bot-type=neural")
+
+        if args.neural_weights and len(args.neural_weights) != 5:
+            parser.error("--neural-weights doit contenir exactement 5 valeurs")
+
         # Affichage du choix du bot
         bot_display = {
             "single": "🧠 Bot Simple (1 tuyau)",
             "two_pipes": "🔮 Bot Deux Tuyaux (2 tuyaux)",
+            "neural": f"🤖 Bot Neural (poids: {args.neural_weights})",
         }
         print(f"Bot sélectionné: {bot_display[args.bot_type]}")
 
-        main(iterations=args.num_games, bot_type=args.bot_type)
+        main(
+            iterations=args.num_games,
+            bot_type=args.bot_type,
+            neural_weights=args.neural_weights,
+        )

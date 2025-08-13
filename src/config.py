@@ -2,11 +2,11 @@ SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 30
 
-PIPE_GAP = 120
+PIPE_GAP = 130
 PIPE_HEIGHT = 512
 
 # Pipe gap transition constraints
-MAX_GAP_TRANSITION = 150  # Maximum vertical distance between consecutive pipe gaps
+MAX_GAP_TRANSITION = 100  # Maximum vertical distance between consecutive pipe gaps
 MIN_GAP_Y = 100  # Minimum gap center Y position (from top of screen)
 MAX_GAP_Y = 500  # Maximum gap center Y position (from top of screen)
 

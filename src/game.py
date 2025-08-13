@@ -22,7 +22,7 @@ class Game:
         Args:
             bot_mode: If True, enables AI bot control instead of human input
             seed: Random seed for reproducible games (None for random seed)
-            bot_type: Type of bot to use ("single" for Bot, "two_pipes" for Bot_two_pipes)
+            bot_type: Type of bot to use ("single" for Bot, "two_pipes" for Bot_two_pipes, "metrics" for Bot_metrics, "neural" for Bot_neural)
         """
         try:
             # Set random seed for reproducible games
@@ -56,6 +56,12 @@ class Game:
             if bot_mode:
                 if bot_type == "two_pipes":
                     self.bot = Bot_two_pipes(self)
+                elif bot_type == "metrics":
+                    self.bot = Bot_metrics(self)
+                elif bot_type == "neural":
+                    # Neural bot needs weights parameter
+                    weights = getattr(self, "neural_weights", [1.0, 1.0, 1.0, 1.0])
+                    self.bot = Bot_neural(self, weights)
                 else:
                     self.bot = Bot(self)
             else:
@@ -88,7 +94,7 @@ class Game:
         if not last:
             return True
 
-        return config.SCREEN_WIDTH - (last.x + last.w) > last.w * 2.5
+        return config.SCREEN_WIDTH - (last.x + last.w) > last.w * 3.0
 
     def spawn_new_pipes(self) -> None:
         """Add new pipes when the first pipe is about to be out of the screen"""
@@ -132,26 +138,31 @@ class Game:
             if not self.bot_mode and self.is_tap_event(event):
                 self.bird.flap()
 
-        # Bot decision making (only in bot mode)
+        # Bot decision making + bird movement (like in multi_bird_genetic)
         if self.bot_mode and self.bot:
             decision = self.bot.decide_action()
             if decision == "flap":
                 self.bird.flap()
 
-        # Update score
-        self._update_score()
+        # Bird physics (move bird like in multi_bird_genetic)
+        self.bird.next_status(None, False)  # Move bird but don't draw yet
 
-        # Check for collisions
+        # Check for collisions (like in multi_bird_genetic)
         if self._check_collisions():
             return False
 
-        # Update game objects
-        self._update_pipes()
-        self._update_and_draw()
-
-        # Check if bird hit ground
+        # Check if bird hit ground (like in multi_bird_genetic)
         if self.bird.y > self.bird_lowest_height:
             return False
+
+        # Update pipes (like in multi_bird_genetic)
+        self._update_pipes()
+
+        # Update score (like in multi_bird_genetic)
+        self._update_score()
+
+        # Draw everything (separate from movement logic)
+        self._draw_game()
 
         return True
 
@@ -180,21 +191,34 @@ class Game:
         )
 
     def _update_pipes(self) -> None:
-        """Update pipe positions and manage pipe lifecycle"""
+        """Update pipe positions and manage pipe lifecycle (like in multi_bird_genetic)"""
+        # Add new pipes when needed
         if self.can_spawn_pipes():
             self.spawn_new_pipes()
+
+        # Remove old pipes
         self.remove_old_pipes()
 
-    def _update_and_draw(self) -> None:
-        """Update all game objects and draw the frame"""
+        # Move all existing pipes (like in multi_bird_genetic.update_pipes)
+        for pipe in self.upper_pipes + self.lower_pipes:
+            pipe.next_status(None, False)  # Move but don't draw
+
+    def _draw_game(self) -> None:
+        """Draw the complete game frame (like draw_all in multi_bird_genetic)"""
         self.background.draw(self.screen)
 
+        # Draw pipes (without moving them)
         for up, low in zip(self.upper_pipes, self.lower_pipes):
-            up.next_status(self.screen, draw=True)
-            low.next_status(self.screen, draw=True)
+            # Just draw, don't move (movement already done in _update_pipes)
+            if self.screen is not None:
+                self.screen.blit(up.image, up.rect)
+                self.screen.blit(low.image, low.rect)
 
+        # Draw bird (without moving it again)
+        self.bird.draw(self.screen)
+
+        # Draw score
         self.score.draw(self.screen)
-        self.bird.next_status(self.screen, draw=True)
 
         # Draw bot mode indicator
         if self.bot_mode:
@@ -202,6 +226,10 @@ class Game:
 
         pygame.display.update()
         self.clock.tick(config.FPS)
+
+    def _update_and_draw(self) -> None:
+        """Legacy method - kept for compatibility but redirects to _draw_game"""
+        self._draw_game()
 
     def _draw_bot_indicator(self) -> None:
         """Draw visual indicator that bot mode is active"""
@@ -844,3 +872,262 @@ class Bot_two_pipes:
 
         # If both are safe or both lead to collision, let the two-move simulation decide
         return None
+
+
+class Bot_metrics:
+    """AI bot that makes decisions based on specific input metrics"""
+
+    def __init__(self, game: "Game") -> None:
+        """Initialize bot with reference to game
+
+        Args:
+            game: The game instance to control
+        """
+        self.game = game
+
+    def decide_action(self) -> str:
+        """Decide whether to flap or not based on input metrics
+
+        Input metrics:
+        - current_y_velocity: Bird's current vertical velocity
+        - distance_to_top_pipe: Vertical distance to nearest top pipe
+        - distance_to_bottom_pipe: Vertical distance to nearest bottom pipe
+        - horizontal_distance_to_next_pipe: Horizontal distance to next pipe
+
+        Returns:
+            str: "flap" if bird should flap, "no_flap" otherwise
+        """
+        if not self.game.upper_pipes or not self.game.lower_pipes:
+            return "no_flap"
+
+        # Find the next pipe to navigate
+        next_upper_pipe = None
+        next_lower_pipe = None
+
+        for upper, lower in zip(self.game.upper_pipes, self.game.lower_pipes):
+            if upper.x + upper.w > self.game.bird.x:
+                next_upper_pipe = upper
+                next_lower_pipe = lower
+                break
+
+        if not next_upper_pipe:
+            return "no_flap"
+
+        # Calculate input metrics
+        metrics = self._calculate_metrics(next_upper_pipe, next_lower_pipe)
+
+        # Make decision based on metrics
+        return self._make_decision(metrics)
+
+    def _calculate_metrics(self, upper_pipe, lower_pipe) -> dict:
+        """Calculate the input metrics for decision making
+
+        Args:
+            upper_pipe: The upper pipe to navigate
+            lower_pipe: The lower pipe to navigate
+
+        Returns:
+            dict: Dictionary containing all input metrics
+        """
+        bird_y = self.game.bird.y
+        bird_velocity_y = self.game.bird.velocity_y
+        bird_x = self.game.bird.x
+
+        # Metric 1: Current Y velocity
+        current_y_velocity = bird_velocity_y
+
+        # Metric 2: Vertical distance to nearest top pipe (bottom edge of top pipe)
+        top_pipe_bottom = upper_pipe.y + upper_pipe.h
+        distance_to_top_pipe = bird_y - top_pipe_bottom  # Positive = bird is below pipe
+
+        # Metric 3: Vertical distance to nearest bottom pipe (top edge of bottom pipe)
+        bottom_pipe_top = lower_pipe.y
+        distance_to_bottom_pipe = (
+            bottom_pipe_top - bird_y
+        )  # Positive = bird is above pipe
+
+        # Metric 4: Horizontal distance to next pipe
+        horizontal_distance_to_next_pipe = upper_pipe.x - bird_x
+
+        return {
+            "current_y_velocity": current_y_velocity,
+            "distance_to_top_pipe": distance_to_top_pipe,
+            "distance_to_bottom_pipe": distance_to_bottom_pipe,
+            "horizontal_distance_to_next_pipe": horizontal_distance_to_next_pipe,
+        }
+
+    def _make_decision(self, metrics: dict) -> str:
+        """Make flap/no_flap decision based on metrics
+
+        Args:
+            metrics: Dictionary containing input metrics
+
+        Returns:
+            str: "flap" or "no_flap"
+        """
+        velocity = metrics["current_y_velocity"]
+        dist_top = metrics["distance_to_top_pipe"]
+        dist_bottom = metrics["distance_to_bottom_pipe"]
+        horizontal_dist = metrics["horizontal_distance_to_next_pipe"]
+
+        # Decision logic based on the four metrics
+
+        # Rule 1: If we're very close to top pipe and moving up, don't flap
+        if dist_top < 20 and velocity < 0:
+            return "no_flap"
+
+        # Rule 2: If we're very close to bottom pipe and moving down, flap
+        if dist_bottom < 20 and velocity > 0:
+            return "flap"
+
+        # Rule 3: If we're moving too fast down and not close to bottom, flap
+        if velocity > 5 and dist_bottom > 30:
+            return "flap"
+
+        # Rule 4: If we're moving too fast up and not close to top, don't flap
+        if velocity < -5 and dist_top > 30:
+            return "no_flap"
+
+        # Rule 5: Try to center between pipes based on position and velocity
+        gap_center = (
+            dist_top - dist_bottom
+        ) / 2  # 0 = centered, positive = closer to bottom
+
+        # If we're below center and not moving up fast enough, flap
+        if gap_center > 5 and velocity > -3:
+            return "flap"
+
+        # If we're above center and not falling fast enough, don't flap
+        if gap_center < -5 and velocity < 3:
+            return "no_flap"
+
+        # Rule 6: Horizontal distance consideration - be more aggressive when far
+        if horizontal_dist > 150:
+            # Far from pipe, be more conservative with positioning
+            if gap_center > 0 and velocity >= 0:  # Below center and not moving up
+                return "flap"
+            elif gap_center < 0 and velocity <= 0:  # Above center and not moving down
+                return "no_flap"
+
+        # Default: slight bias towards maintaining position
+        if velocity > 2:  # Falling too fast
+            return "flap"
+        elif velocity < -2:  # Rising too fast
+            return "no_flap"
+        else:
+            return "no_flap"  # Maintain current trajectory
+
+
+class Bot_neural:
+    """AI bot that uses a simple perceptron with genetic algorithm optimization"""
+
+    def __init__(self, game: "Game", weights: list) -> None:
+        """Initialize bot with reference to game and neural network weights
+
+        Args:
+            game: The game instance to control
+            weights: List of 5 weights [w1, w2, w3, w4, bias] for [velocity, dist_top, dist_bottom, horizontal_dist, bias]
+        """
+        self.game = game
+        self.weights = weights  # [w1, w2, w3, w4, bias]
+
+    def decide_action(self) -> str:
+        """Decide whether to flap using perceptron with logistic function
+
+        Formula: y = w1*velocity + w2*dist_top + w3*dist_bottom + w4*horizontal_dist + bias
+        Decision: logistic(y) >= 0.5 -> flap, else no_flap
+
+        Returns:
+            str: "flap" if bird should flap, "no_flap" otherwise
+        """
+        if not self.game.upper_pipes or not self.game.lower_pipes:
+            return "no_flap"
+
+        # Find the next pipe to navigate
+        next_upper_pipe = None
+        next_lower_pipe = None
+
+        for upper, lower in zip(self.game.upper_pipes, self.game.lower_pipes):
+            if upper.x + upper.w > self.game.bird.x:  # Position réelle de l'oiseau
+                next_upper_pipe = upper
+                next_lower_pipe = lower
+                break
+
+        if not next_upper_pipe:
+            return "no_flap"
+
+        # Calculate input metrics
+        metrics = self._calculate_metrics(next_upper_pipe, next_lower_pipe)
+
+        # Apply perceptron
+        output = self._perceptron(metrics)
+
+        # Decision based on logistic function
+        return "flap" if output >= 0.5 else "no_flap"
+
+    def _calculate_metrics(self, upper_pipe, lower_pipe) -> list:
+        """Calculate the 4 input metrics for the perceptron
+
+        Args:
+            upper_pipe: The upper pipe to navigate
+            lower_pipe: The lower pipe to navigate
+
+        Returns:
+            list: [velocity, dist_top, dist_bottom, horizontal_dist]
+        """
+        bird_y = self.game.bird.y
+        bird_velocity_y = self.game.bird.velocity_y
+        bird_x = self.game.bird.x  # Position réelle de l'oiseau
+
+        # Metric 1: Current Y velocity
+        velocity = bird_velocity_y
+
+        # Metric 2: Vertical distance to top pipe (bottom edge of top pipe)
+        top_pipe_bottom = upper_pipe.y + upper_pipe.h
+        dist_top = bird_y - top_pipe_bottom  # Positive = bird is below top pipe
+
+        # Metric 3: Vertical distance to bottom pipe (top edge of bottom pipe)
+        bottom_pipe_top = lower_pipe.y
+        dist_bottom = bottom_pipe_top - bird_y  # Positive = bird is above bottom pipe
+
+        # Metric 4: Horizontal distance to next pipe
+        horizontal_dist = upper_pipe.x - bird_x
+
+        # Normaliser les métriques
+        velocity_norm = velocity / 20.0  # Normaliser vitesse (-20 à +20 → -1 à +1)
+        dist_top_norm = (
+            dist_top / config.SCREEN_HEIGHT
+        )  # Normaliser par hauteur d'écran
+        dist_bottom_norm = (
+            dist_bottom / config.SCREEN_HEIGHT
+        )  # Normaliser par hauteur d'écran
+        horizontal_dist_norm = (
+            horizontal_dist / config.SCREEN_WIDTH
+        )  # Normaliser par largeur d'écran
+
+        return [velocity_norm, dist_top_norm, dist_bottom_norm, horizontal_dist_norm]
+
+    def _perceptron(self, inputs: list) -> float:
+        """Apply perceptron with logistic activation function
+
+        Args:
+            inputs: List of 4 input values [velocity, dist_top, dist_bottom, horizontal_dist]
+
+        Returns:
+            float: Output of logistic function (between 0 and 1)
+        """
+        # Linear combination: y = w1*x1 + w2*x2 + w3*x3 + w4*x4 + bias
+        linear_output = (
+            sum(w * x for w, x in zip(self.weights[:-1], inputs)) + self.weights[-1]
+        )  # bias is the last weight
+
+        # Logistic function: 1 / (1 + e^(-y))
+        import math
+
+        try:
+            logistic_output = 1.0 / (1.0 + math.exp(-linear_output))
+        except OverflowError:
+            # Handle extreme values
+            logistic_output = 0.0 if linear_output < 0 else 1.0
+
+        return logistic_output

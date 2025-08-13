@@ -5,6 +5,7 @@ import sys
 import time
 
 try:
+    from multi_bird_genetic import MultiGeneticGame
     from src.game import Game
 
     PYGAME_AVAILABLE = True
@@ -13,10 +14,20 @@ except ImportError:
 
 
 def replay_auto_close_game(
-    seed: int, verbose: bool = True, bot_type: str = "single"
+    seed: int,
+    verbose: bool = True,
+    bot_type: str = "single",
+    neural_weights: list = None,
 ) -> None:
     """Reproduit une partie avec fermeture automatique avec une seed spécifique."""
-    bot_name = "Bot Deux Tuyaux" if bot_type == "two_pipes" else "Bot Simple"
+    if bot_type == "single":
+        bot_name = "Bot Simple"
+    elif bot_type == "two_pipes":
+        bot_name = "Bot Deux Tuyaux"
+    elif bot_type == "neural":
+        bot_name = f"Bot Neural {neural_weights}"
+    else:
+        bot_name = f"Bot {bot_type}"
     if verbose:
         print(f"🔄 Reproduction de la partie avec la seed: {seed} ({bot_name})")
         print("-" * 50)
@@ -24,43 +35,90 @@ def replay_auto_close_game(
     try:
         start_time = time.time()
 
-        # Utiliser la classe Game en mode auto-close (comme sequential_visual)
-        class AutoCloseGame(Game):
-            def _handle_game_over(self):
-                # Auto-close after game over
-                time.sleep(0.1)
-                return
+        # Pour les bots neural, utiliser MultiGeneticGame pour la cohérence
+        if bot_type == "neural" and neural_weights:
+            import os
 
-        # Créer et lancer le jeu avec auto-close
-        import os
+            if "SDL_VIDEODRIVER" not in os.environ:
+                os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-        if "SDL_VIDEODRIVER" not in os.environ:
-            os.environ["SDL_VIDEODRIVER"] = "dummy"  # Use dummy driver if no display
+            # Créer un jeu avec un seul oiseau neural
+            population_weights = [neural_weights]
+            game = MultiGeneticGame(population_weights, seed=seed)
 
-        game = AutoCloseGame(bot_mode=True, seed=seed, bot_type=bot_type)
+            if verbose:
+                print(f"Partie initialisée avec la seed {seed}")
 
-        if verbose:
-            print(f"Partie initialisée avec la seed {game.seed}")
+            results = game.run_generation()
+            duration = time.time() - start_time
 
-        game.play_game()
+            # Extraire les résultats du seul oiseau
+            weights, fitness, frames = results[0]
 
-        duration = time.time() - start_time
+            if verbose:
+                print("\n🎯 Résultats de la reproduction:")
+                print(f"  Seed utilisée: {seed}")
+                print(f"  Score final: {fitness}")
+                print(f"  Tuyaux passés: {fitness}")
+                print(f"  Frames survécues: {frames}")
+                print(f"  Durée: {duration:.3f} secondes")
 
-        if verbose:
-            print("\n🎯 Résultats de la reproduction:")
-            print(f"  Seed utilisée: {game.seed}")
-            print(f"  Score final: {game.score.score}")
-            print(f"  Tuyaux passés: {game.score.score}")
-            print(f"  Durée: {duration:.3f} secondes")
+            return fitness, frames
+        else:
+            # Utiliser la classe Game en mode auto-close pour les autres bots
+            class AutoCloseGame(Game):
+                def _handle_game_over(self):
+                    # Auto-close after game over
+                    time.sleep(0.1)
+                    return
+
+            # Créer et lancer le jeu avec auto-close
+            import os
+
+            if "SDL_VIDEODRIVER" not in os.environ:
+                os.environ[
+                    "SDL_VIDEODRIVER"
+                ] = "dummy"  # Use dummy driver if no display
+
+            game = AutoCloseGame(bot_mode=True, seed=seed, bot_type=bot_type)
+
+            # Set neural weights if using neural bot
+            if bot_type == "neural" and neural_weights:
+                game.neural_weights = neural_weights
+
+            if verbose:
+                print(f"Partie initialisée avec la seed {game.seed}")
+
+            game.play_game()
+
+            duration = time.time() - start_time
+
+            if verbose:
+                print("\n🎯 Résultats de la reproduction:")
+                print(f"  Seed utilisée: {game.seed}")
+                print(f"  Score final: {game.score.score}")
+                print(f"  Tuyaux passés: {game.score.score}")
+                print(f"  Durée: {duration:.3f} secondes")
+
+            return game.score.score, None
 
     except Exception as e:
         print(f"❌ Erreur pendant la reproduction: {e}")
         return
 
 
-def replay_visual_game(seed: int, bot_type: str = "single") -> None:
+def replay_visual_game(
+    seed: int, bot_type: str = "single", neural_weights: list = None
+) -> None:
     """Reproduit une partie avec affichage visuel en utilisant une seed spécifique."""
-    bot_name = "Bot Deux Tuyaux" if bot_type == "two_pipes" else "Bot Simple"
+    if bot_type == "single":
+        bot_name = "Bot Simple"
+    elif bot_type == "two_pipes":
+        bot_name = "Bot Deux Tuyaux"
+    elif bot_type == "neural":
+        bot_name = f"Bot Neural {neural_weights}"
+    else:
+        bot_name = f"Bot {bot_type}"
 
     if not PYGAME_AVAILABLE:
         print("❌ Pygame non disponible. Mode visuel non supporté.")
@@ -82,16 +140,39 @@ def replay_visual_game(seed: int, bot_type: str = "single") -> None:
         if "SDL_VIDEODRIVER" in os.environ and os.environ["SDL_VIDEODRIVER"] == "dummy":
             del os.environ["SDL_VIDEODRIVER"]
 
-        # Créer et lancer exactement comme main_bot.py
-        game = Game(bot_mode=True, seed=seed, bot_type=bot_type)
-        print(f"Partie initialisée avec la seed {game.seed}")
+        # Pour les bots neural, utiliser MultiGeneticGame avec affichage visuel
+        if bot_type == "neural" and neural_weights:
+            # Créer un jeu avec un seul oiseau neural en mode visuel
+            population_weights = [neural_weights]
+            game = MultiGeneticGame(population_weights, seed=seed)
 
-        # Jouer la partie avec fenêtre graphique pygame
-        game.play_game()
+            print(f"Partie initialisée avec la seed {seed}")
 
-        print("\n🎯 Partie terminée:")
-        print(f"  Seed utilisée: {game.seed}")
-        print(f"  Score final: {game.score.score}")
+            results = game.run_generation()
+
+            # Extraire les résultats du seul oiseau
+            weights, fitness, frames = results[0]
+
+            print("\n🎯 Partie terminée:")
+            print(f"  Seed utilisée: {seed}")
+            print(f"  Score final: {fitness}")
+            print(f"  Frames survécues: {frames}")
+        else:
+            # Créer et lancer exactement comme main_bot.py pour les autres bots
+            game = Game(bot_mode=True, seed=seed, bot_type=bot_type)
+
+            # Set neural weights if using neural bot
+            if bot_type == "neural" and neural_weights:
+                game.neural_weights = neural_weights
+
+            print(f"Partie initialisée avec la seed {game.seed}")
+
+            # Jouer la partie avec fenêtre graphique pygame
+            game.play_game()
+
+            print("\n🎯 Partie terminée:")
+            print(f"  Seed utilisée: {game.seed}")
+            print(f"  Score final: {game.score.score}")
 
     except Exception as e:
         print(f"❌ Erreur pendant la partie visuelle: {e}")
@@ -165,6 +246,8 @@ Exemples d'utilisation:
   python replay_seed.py -s 12345 -v                   # Mode visuel avec bot simple
   python replay_seed.py -s 12345 -b two_pipes         # Bot avancé, mode auto-close
   python replay_seed.py -s 12345 -v -b two_pipes      # Bot avancé, mode visuel
+  python replay_seed.py -s 12345 -b neural -w 0.884 1.957 -1.020 1.782 -0.515        # Bot neural
+  python replay_seed.py -s 12345 -v -b neural -w 0.884 1.957 -1.020 1.782 -0.515     # Bot neural visuel
   python replay_seed.py -f results.csv -g 42 -v       # Game ID 42 en visuel
         """,
     )
@@ -180,9 +263,16 @@ Exemples d'utilisation:
     parser.add_argument(
         "-b",
         "--bot-type",
-        choices=["single", "two_pipes"],
+        choices=["single", "two_pipes", "neural"],
         default="single",
         help="Type de bot à utiliser (défaut: single)",
+    )
+    parser.add_argument(
+        "-w",
+        "--neural-weights",
+        nargs=5,
+        type=float,
+        help="Poids pour le bot neural [w1, w2, w3, w4, bias] (requis si bot-type=neural)",
     )
 
     args = parser.parse_args()
@@ -201,20 +291,33 @@ Exemples d'utilisation:
         parser.print_help()
         sys.exit(1)
 
+    # Validation pour bot neural
+    if args.bot_type == "neural" and not args.neural_weights:
+        parser.error("--neural-weights est requis quand --bot-type=neural")
+
+    if args.neural_weights and len(args.neural_weights) != 5:
+        parser.error("--neural-weights doit contenir exactement 5 valeurs")
+
     # Affichage du bot sélectionné
     bot_display = {
         "single": "🧠 Bot Simple (1 tuyau)",
         "two_pipes": "🔮 Bot Deux Tuyaux (2 tuyaux)",
+        "neural": f"🤖 Bot Neural (poids: {args.neural_weights})",
     }
     if not args.quiet:
         print(f"Bot sélectionné: {bot_display[args.bot_type]}")
 
     try:
         if args.visual:
-            replay_visual_game(args.seed, bot_type=args.bot_type)
+            replay_visual_game(
+                args.seed, bot_type=args.bot_type, neural_weights=args.neural_weights
+            )
         else:
             replay_auto_close_game(
-                args.seed, verbose=not args.quiet, bot_type=args.bot_type
+                args.seed,
+                verbose=not args.quiet,
+                bot_type=args.bot_type,
+                neural_weights=args.neural_weights,
             )
 
     except KeyboardInterrupt:
